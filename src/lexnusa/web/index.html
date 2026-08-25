@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Telusuri regulasi Indonesia dengan kutipan pasal dan sumber resmi." />
+    <title>LexNusa — Telusur hukum dengan sumber</title>
+    <link rel="stylesheet" href="/assets/app.css" />
+  </head>
+  <body>
+    <header class="masthead">
+      <a class="brand" href="/" aria-label="LexNusa beranda">
+        <span class="brand-mark">LN</span>
+        <span>LexNusa</span>
+      </a>
+      <span class="status"><i></i> Sumber resmi terindeks</span>
+    </header>
+
+    <main>
+      <section class="hero">
+        <p class="eyebrow">ASISTEN REGULASI INDONESIA</p>
+        <h1>Temukan dasar hukumnya.<br /><em>Baca pasalnya.</em></h1>
+        <p class="intro">Ajukan pertanyaan dalam bahasa sehari-hari. LexNusa menelusuri regulasi, memeriksa statusnya, dan selalu menunjukkan dokumen asal.</p>
+      </section>
+
+      <section class="chat-card" aria-label="Percakapan hukum">
+        <div id="messages" class="messages" aria-live="polite">
+          <article class="welcome">
+            <span class="seal">§</span>
+            <div>
+              <strong>Mulai penelusuran</strong>
+              <p>Coba pertanyaan tentang hak, kewajiban, perizinan, atau status suatu peraturan.</p>
+            </div>
+          </article>
+        </div>
+        <div class="suggestions" aria-label="Contoh pertanyaan">
+          <button>Apa ketentuan perlindungan saksi?</button>
+          <button>Apakah UU Nomor 1 Tahun 2020 masih berlaku?</button>
+          <button>Bandingkan perlindungan saksi dan korban</button>
+        </div>
+        <form id="chat-form">
+          <label class="sr-only" for="question">Pertanyaan hukum</label>
+          <textarea id="question" rows="2" maxlength="1000" placeholder="Tulis pertanyaan hukum Anda…" required></textarea>
+          <button id="submit" type="submit">Telusuri <span>→</span></button>
+        </form>
+        <p class="notice">LexNusa adalah alat bantu pencarian, bukan pengganti konsultasi hukum resmi.</p>
+      </section>
+    </main>
+
+    <footer><span>Regulasi, tanpa ruang untuk karangan.</span><span>Pasal • Status • Sumber resmi</span></footer>
+    <script src="/assets/app.js" defer></script>
+  </body>
+</html>

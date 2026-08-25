@@ -1,0 +1,32 @@
+name: Scrape official regulations
+
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: Maximum documents
+        default: "100"
+  schedule:
+    - cron: "17 18 * * 0"
+
+permissions:
+  contents: read
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install .
+      - name: Fetch a rate-limited sample
+        run: lexnusa-scrape --limit "${{ inputs.limit || '100' }}" --delay 2
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lexnusa-raw-regulations
+          path: data/raw/
+          retention-days: 14
+

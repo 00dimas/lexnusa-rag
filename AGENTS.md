@@ -5,9 +5,10 @@ File ini isinya cara kerja yang diharapkan saat kamu membantu membangun repo ini
 
 ## Status saat ini
 
-Repo ini masih **kosong / tahap blueprint** — belum ada kode. Kalau diminta "bantu bangun
-sistemnya" tanpa instruksi lebih spesifik, mulai dari milestone paling awal yang belum
-selesai di tabel Roadmap pada `README.md` (urutannya M0 → M6, jangan loncat).
+Repo saat ini sudah menyelesaikan **M0-M5**: ingestion, RAG CLI, hybrid retrieval, router/status,
+FastAPI, chat UI, dan konfigurasi deployment. Kalau diminta "next" tanpa instruksi lebih spesifik,
+lanjutkan milestone paling awal yang belum selesai di tabel Roadmap pada `README.md` (saat ini M6;
+tetap kerjakan berurutan dan satu milestone per iterasi).
 
 ## Prinsip kerja
 

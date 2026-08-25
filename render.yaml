@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: lexnusa
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: LEXNUSA_INDEX_DIR
+        value: /var/data/qdrant
+      - key: LEXNUSA_RATE_LIMIT
+        value: "30"
+      - key: GROQ_API_KEY
+        sync: false
+      - key: QDRANT_URL
+        sync: false
+      - key: QDRANT_API_KEY
+        sync: false

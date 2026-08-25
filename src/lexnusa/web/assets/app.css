@@ -1,0 +1,21 @@
+:root { --ink:#17231d; --paper:#f4f0e6; --cream:#fffdf6; --green:#174c38; --gold:#bd8b3b; --muted:#66736b; --line:#d8d4c8; }
+* { box-sizing:border-box; }
+body { margin:0; color:var(--ink); background:var(--paper); font-family:Inter,ui-sans-serif,system-ui,-apple-system,sans-serif; }
+body::before { content:""; position:fixed; inset:0; pointer-events:none; opacity:.22; background-image:radial-gradient(#6e756c 0.55px,transparent .55px); background-size:7px 7px; }
+.masthead { height:72px; display:flex; align-items:center; justify-content:space-between; max-width:1180px; margin:auto; padding:0 28px; border-bottom:1px solid var(--line); }
+.brand { color:var(--ink); text-decoration:none; display:flex; align-items:center; gap:11px; font-family:Georgia,serif; font-weight:700; font-size:22px; }
+.brand-mark { display:grid; place-items:center; width:35px; height:35px; color:var(--cream); background:var(--green); border-radius:50% 50% 46% 46%; font:700 11px/1 Inter,sans-serif; letter-spacing:.06em; }
+.status { font-size:12px; color:var(--muted); letter-spacing:.04em; }.status i { display:inline-block; width:7px; height:7px; border-radius:50%; background:#3f9467; margin-right:7px; box-shadow:0 0 0 4px #3f94671b; }
+main { width:min(900px,calc(100% - 36px)); margin:0 auto; padding:68px 0 52px; }
+.hero { max-width:780px; margin-bottom:42px; }.eyebrow { color:var(--gold); font-size:11px; font-weight:800; letter-spacing:.22em; }
+h1 { margin:13px 0 20px; font:500 clamp(42px,7vw,72px)/.98 Georgia,serif; letter-spacing:-.045em; } h1 em { color:var(--green); font-weight:400; }
+.intro { max-width:660px; color:var(--muted); font:400 17px/1.65 Georgia,serif; }
+.chat-card { background:var(--cream); border:1px solid var(--line); border-radius:4px; box-shadow:0 22px 60px #23352a12; overflow:hidden; }
+.messages { min-height:170px; max-height:520px; overflow:auto; padding:28px; }.welcome { display:flex; gap:17px; align-items:center; color:var(--muted); }.welcome strong { color:var(--ink); }.welcome p { margin:5px 0 0; font-size:14px; }.seal { flex:0 0 auto; display:grid; place-items:center; width:45px; height:45px; border:1px solid var(--gold); border-radius:50%; color:var(--gold); font:24px Georgia,serif; }
+.message { max-width:88%; margin:0 0 20px; padding:15px 17px; border-radius:3px; white-space:pre-wrap; font-size:14px; line-height:1.65; }.message.user { margin-left:auto; background:var(--green); color:white; }.message.assistant { border-left:3px solid var(--gold); background:#f6f2e8; }.route { margin:-10px 0 22px; color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.1em; }
+.suggestions { display:flex; gap:8px; overflow:auto; padding:0 28px 18px; }.suggestions button { flex:0 0 auto; border:1px solid var(--line); color:var(--green); background:transparent; border-radius:30px; padding:8px 12px; cursor:pointer; font-size:12px; }.suggestions button:hover { border-color:var(--green); }
+form { display:flex; gap:12px; align-items:flex-end; padding:18px 20px; border-top:1px solid var(--line); background:#faf8f1; } textarea { flex:1; resize:none; border:0; outline:0; background:transparent; color:var(--ink); font:15px/1.5 inherit; } form button { border:0; border-radius:2px; background:var(--green); color:white; padding:13px 18px; font-weight:700; cursor:pointer; } form button:disabled { opacity:.55; cursor:wait; } form button span { margin-left:8px; }
+.notice { margin:0; padding:0 20px 16px; background:#faf8f1; color:#7b827d; font-size:10px; }
+footer { max-width:1180px; margin:auto; padding:25px 28px 34px; border-top:1px solid var(--line); display:flex; justify-content:space-between; color:var(--muted); font:12px Georgia,serif; }
+.sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+@media (max-width:640px) { .status { display:none; } main { padding-top:42px; }.hero { margin-bottom:30px; }.messages { padding:20px; }.suggestions { padding-left:20px; }.message { max-width:96%; } form { flex-direction:column; align-items:stretch; } footer { gap:10px; flex-direction:column; } }
