@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import json
 import os
 import time
 from collections import defaultdict, deque
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable, Deque, Optional
 
@@ -33,6 +35,17 @@ class ChatResponse(BaseModel):
     plan: QueryPlanResponse
 
 
+class FeedbackRequest(BaseModel):
+    question: str = Field(min_length=3, max_length=1000)
+    answer: str = Field(min_length=1, max_length=5000)
+    relevant: bool
+    comment: Optional[str] = Field(default=None, max_length=1000)
+
+
+class FeedbackResponse(BaseModel):
+    status: str = "recorded"
+
+
 class SlidingWindowLimiter:
     def __init__(self, requests: int = 30, window_seconds: int = 60) -> None:
         self.requests = requests
@@ -52,12 +65,25 @@ class SlidingWindowLimiter:
         events.append(now)
 
 
+def _allowed_api_keys() -> set[str]:
+    """Invite-code allowlist for a soft launch to a limited group of testers.
+
+    LEXNUSA_API_KEY keeps working as a single shared key; LEXNUSA_API_KEYS (comma-separated)
+    lets each tester get their own key so access can be granted or revoked individually
+    without rotating a secret everyone shares.
+    """
+    keys = {key for key in (os.getenv("LEXNUSA_API_KEY"),) if key}
+    keys.update(key.strip() for key in os.getenv("LEXNUSA_API_KEYS", "").split(",") if key.strip())
+    return keys
+
+
 def create_app(
     *,
     answer_function: AnswerFunction = answer,
     index_dir: Path | None = None,
     static_dir: Path | None = None,
     rate_limit: int | None = None,
+    feedback_file: Path | None = None,
 ) -> FastAPI:
     app = FastAPI(
         title="LexNusa API",
@@ -66,13 +92,14 @@ def create_app(
     )
     configured_index = index_dir or Path(os.getenv("LEXNUSA_INDEX_DIR", "data/qdrant"))
     configured_static = static_dir or Path(__file__).with_name("web")
+    configured_feedback = feedback_file or Path(os.getenv("LEXNUSA_FEEDBACK_FILE", "data/feedback.jsonl"))
     limiter = SlidingWindowLimiter(
         requests=rate_limit or int(os.getenv("LEXNUSA_RATE_LIMIT", "30"))
     )
 
     def authorize(request: Request, x_api_key: Optional[str] = Header(default=None)) -> None:
-        expected = os.getenv("LEXNUSA_API_KEY")
-        if expected and x_api_key != expected:
+        allowed = _allowed_api_keys()
+        if allowed and x_api_key not in allowed:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="API key tidak valid.")
         client = request.client.host if request.client else "unknown"
         limiter.check(x_api_key or client)
@@ -96,6 +123,21 @@ def create_app(
             answer=result,
             plan=QueryPlanResponse(route=plan.route.value, queries=list(plan.queries)),
         )
+
+    @app.post("/api/feedback", response_model=FeedbackResponse, dependencies=[Depends(authorize)])
+    def feedback(payload: FeedbackRequest, x_api_key: Optional[str] = Header(default=None)) -> FeedbackResponse:
+        configured_feedback.parent.mkdir(parents=True, exist_ok=True)
+        record = {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "question": payload.question,
+            "answer": payload.answer,
+            "relevant": payload.relevant,
+            "comment": payload.comment,
+            "client": x_api_key or "anonymous",
+        }
+        with configured_feedback.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(record, ensure_ascii=False) + "\n")
+        return FeedbackResponse()
 
     if configured_static.exists():
         assets = configured_static / "assets"

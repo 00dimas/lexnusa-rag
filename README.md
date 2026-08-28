@@ -1,69 +1,68 @@
 # LexNusa
 
-Asisten AI untuk regulasi dan putusan hukum Indonesia — dijawab dengan kutipan pasal, bukan karangan.
+An AI assistant for Indonesian law and regulations — answers come with article citations, not made-up text.
 
-> Status: **M5 — API, UI & deploy-ready**. FastAPI, chat UI responsif, router single/multi-hop,
-> status hukum, Qdrant hybrid retrieval, API key, dan rate limiting sudah tersedia.
+## What it does
 
-## Ringkasan
+LexNusa is a Retrieval-Augmented Generation (RAG) system that answers questions about Indonesian
+legislation (laws, government regulations, presidential/ministerial regulations) and Supreme Court
+rulings, sourced directly from official JDIH documents — complete with article citations and
+in-force/repealed status. It targets law students, small businesses checking permit requirements,
+journalists, and anyone who needs a fast answer from government regulations without digging
+through PDFs one by one.
 
-LexNusa adalah sistem RAG (Retrieval-Augmented Generation) yang menjawab pertanyaan seputar
-peraturan perundang-undangan Indonesia (UU, PP, Perpres, Permen) dan putusan Mahkamah Agung,
-langsung dari dokumen resmi JDIH — lengkap dengan kutipan pasal dan status berlaku/dicabut.
+**Ingestion & data**
+- Scheduled scraper (GitHub Actions cron) for JDIH Kemenkumham, peraturan.go.id, and Supreme Court rulings
+- PDF parser that produces structured text per Article/Clause with type, number, and year metadata
+- Automatic status tracker: in force, amended, or repealed, derived from cross-document relations
 
-Target pengguna: mahasiswa hukum, UMKM yang cek perizinan, jurnalis, dan siapa pun yang butuh
-jawaban cepat dari regulasi pemerintah tanpa menggali PDF satu per satu.
+**Retrieval & reasoning**
+- Structure-aware chunking — split per Article, not by arbitrary character length
+- Hybrid search: keyword (BM25) + vector similarity, merged with a reranker
+- Agentic router: simple questions go straight to retrieval, complex ones use multi-hop sub-queries
 
-## Fitur utama
+**Answers & trust**
+- Every answer must cite its source article with a link to the original document
+- Low-confidence detection — answers "not found" instead of fabricating a response
+- Automatic disclaimer: this is a search aid, not a substitute for formal legal counsel
 
-**Ingestion & Data**
-- Scraper terjadwal (GitHub Actions cron) untuk JDIH Kemenkumham, peraturan.go.id, dan putusan MA
-- Parser PDF → teks terstruktur per Pasal/Ayat dengan metadata jenis, nomor, dan tahun
-- Status tracker otomatis: berlaku, diubah, atau dicabut, dari relasi antar dokumen
+**Product & access**
+- Public chat UI plus a REST API for third-party integration
+- Feedback loop (relevant/not relevant) from the chat UI and `POST /api/feedback`
+- Rate limiting and invite-code access (a single shared key or a per-tester key list) for a controlled soft launch
 
-**Retrieval & Reasoning**
-- Chunking sadar-struktur — dipotong per Pasal, bukan sembarang panjang karakter
-- Hybrid search: keyword (BM25) + vector similarity, digabung reranker
-- Agent router: pertanyaan sederhana langsung retrieve, pertanyaan kompleks pakai multi-hop
+**Evaluation**
+- Self-contained golden QA set (`eval/golden_qa.jsonl`) — each case ships its own reference documents
+- `lexnusa-eval` runs retrieval and extractive answering against the golden set offline and reports hit rates
 
-**Jawaban & Kepercayaan**
-- Setiap jawaban wajib menyertakan kutipan pasal dan tautan ke dokumen asli
-- Deteksi low-confidence — jawab "tidak ditemukan" alih-alih mengarang
-- Disclaimer otomatis: bukan pengganti konsultasi hukum resmi
+## Architecture
 
-**Produk & Akses**
-- Chat UI publik plus REST API untuk integrasi pihak ketiga
-- Feedback loop (relevan/tidak) untuk evaluasi kualitas retrieval
-- Rate limiting dan API key untuk kontrol biaya
-
-## Arsitektur
-
-```
-Scraper JDIH → Parser + Chunker → Embedding → Vector DB (Qdrant)
-  → Hybrid Retrieval + Rerank → Agent + LLM → Jawaban + Sitasi
+```text
+JDIH scraper → Parser + chunker → Embedding → Vector DB (Qdrant)
+  → Hybrid retrieval + rerank → Agent + LLM → Answer + citations
 ```
 
 ## Tech stack (free-tier)
 
-| Layer | Komponen | Catatan |
+| Layer | Component | Notes |
 |---|---|---|
-| Data | httpx + BeautifulSoup | Scraping JDIH / peraturan.go.id, gratis |
-| Data | Supabase Storage | Simpan PDF & teks mentah, free tier 1GB |
-| AI — Embedding | sentence-transformers (multilingual-e5-base) | Jalan lokal/CPU, tanpa biaya API |
-| AI — LLM | Groq API (Llama 3.3 / GPT-OSS) | Free tier, inference cepat |
-| AI — LLM cadangan | Gemini API (gemini-2.0-flash) | Free tier ~1500 req/hari |
-| AI — Rerank | bge-reranker (cross-encoder lokal) | Jalan CPU |
-| Vector store | Qdrant | Self-host Docker, atau Cloud free 1GB |
+| Data | httpx + BeautifulSoup | Scraping JDIH / peraturan.go.id, free |
+| Data | Supabase Storage | Stores raw PDFs & text, free tier 1GB |
+| AI — embedding | sentence-transformers (multilingual-e5-base) | Runs locally/CPU, no API cost |
+| AI — LLM | Groq API (Llama 3.3 / GPT-OSS) | Free tier, fast inference |
+| AI — LLM fallback | Gemini API (gemini-2.0-flash) | Free tier, ~1500 req/day |
+| AI — rerank | bge-reranker (local cross-encoder) | Runs on CPU |
+| Vector store | Qdrant | Self-hosted Docker, or Cloud free 1GB |
 | Metadata DB | Supabase / Neon Postgres | Free tier |
 | Backend | FastAPI | — |
-| Frontend | Next.js (atau Streamlit untuk MVP) | — |
-| Hosting backend | Railway / Render | Free tier, sleep saat idle |
-| Hosting frontend | Vercel / HF Spaces | Free tier |
-| Observability | Langfuse (self-host) | Open source, gratis |
+| Frontend | Next.js (or Streamlit for MVP) | — |
+| Backend hosting | Railway / Render | Free tier, sleeps when idle |
+| Frontend hosting | Vercel / HF Spaces | Free tier |
+| Observability | Langfuse (self-hosted) | Open source, free |
 
-## Struktur repo (target)
+## Repo layout
 
-```
+```text
 lexnusa-rag/
 ├── README.md
 ├── docker-compose.yml
@@ -87,141 +86,165 @@ lexnusa-rag/
 ├── frontend/
 │   └── (Next.js app)
 └── eval/
-    └── golden_qa.jsonl      # dataset evaluasi manual
+    └── golden_qa.jsonl      # manual evaluation dataset
 ```
 
-## Roadmap
+## Replicating this project
 
-| # | Milestone | Deskripsi |
-|---|---|---|
-| M0 | Scraper minimal | Ambil ~100 dokumen UU/PP sample dari JDIH, simpan mentah |
-| M1 | Parsing & chunking | Pecah per Pasal, index ke Chroma lokal untuk eksperimen cepat |
-| M2 | RAG pipeline manual | End-to-end lewat CLI: retrieve → prompt → jawaban bersitasi |
-| M3 | Retrieval production-grade | Migrasi ke Qdrant, tambah hybrid search dan reranker |
-| M4 | Agent & status-aware answer | Router agentic, deteksi peraturan yang sudah dicabut/diubah |
-| M5 | API, UI, deploy | FastAPI + frontend chat, live di hosting gratis |
-| M6 | Eval & soft launch | Golden QA set, feedback loop, buka akses terbatas ke publik |
-
-## Menjalankan M0-M3
-
-Prasyarat: Python 3.9 atau lebih baru. Semua perintah berikut menggunakan layanan gratis;
-`GROQ_API_KEY` bersifat opsional karena mode ekstraktif dapat berjalan sepenuhnya lokal.
+Requirements: Python 3.9+. All commands below use free-tier services; `GROQ_API_KEY` is optional
+since extractive mode runs fully offline.
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
 
-# M0: cek robots.txt, beri jeda minimum 2 detik, lalu simpan PDF + metadata.
+# Scrape ~100 sample UU/PP documents from JDIH (checks robots.txt, 2s minimum delay).
 lexnusa-scrape --limit 100 --delay 2
 
-# M1-M3: ekstrak PDF, pecah per Pasal, dan indeks ke Qdrant lokal.
+# Extract PDFs, split per Article, and index into local Qdrant.
 lexnusa-index
 
-# M2-M3: hybrid retrieval tanpa API eksternal.
-lexnusa-ask --no-llm "Apa ketentuan mengenai perlindungan saksi?"
+# Hybrid retrieval with no external API calls.
+lexnusa-ask --no-llm "What are the witness protection provisions?"
 ```
 
-Untuk jawaban generatif, isi `GROQ_API_KEY` lalu jalankan `lexnusa-ask` tanpa `--no-llm`.
-Jawaban tetap menampilkan daftar sumber (pasal dan URL PDF resmi) serta disclaimer. Jika indeks
-kosong, sistem menolak mengarang dan menyatakan informasi tidak ditemukan.
+For generative answers, set `GROQ_API_KEY` and run `lexnusa-ask` without `--no-llm`. The answer
+always lists its sources (article and official PDF URL) plus the disclaimer. If the index is
+empty, the system refuses to invent an answer and reports that nothing was found.
 
-Jalankan pengujian tanpa mengakses situs pemerintah:
+Run the test suite without touching any government site:
 
 ```bash
 pytest -q
 ```
 
-Catatan teknis: embedding hash lokal tetap dipakai sebagai baseline reproducible tanpa unduhan.
-Penggantian ke `multilingual-e5-base` dijadwalkan pada iterasi evaluasi retrieval berikutnya.
+A local hash embedding is used as a reproducible, download-free baseline; swapping in
+`multilingual-e5-base` is a drop-in replacement for a later retrieval-quality pass.
 
-## Menjalankan M3
+### Retrieval backend (Qdrant)
 
-Qdrant dapat berjalan embedded di folder lokal (default), melalui Docker, atau Qdrant Cloud.
+Qdrant can run embedded in a local folder (default), via Docker, or on Qdrant Cloud.
 
 ```bash
-# Embedded: tidak membutuhkan server terpisah.
+# Embedded: no separate server needed.
 lexnusa-index
-lexnusa-ask --backend qdrant --no-llm "Apa ketentuan perlindungan saksi?"
+lexnusa-ask --backend qdrant --no-llm "What are the witness protection provisions?"
 
-# Reranker BGE lokal (model diunduh sekali dari Hugging Face).
+# Local BGE reranker (model downloads once from Hugging Face).
 pip install -e ".[rerank]"
-lexnusa-ask --backend qdrant --rerank --no-llm "Apa ketentuan perlindungan saksi?"
+lexnusa-ask --backend qdrant --rerank --no-llm "What are the witness protection provisions?"
 
-# Server Qdrant lokal; setelah aktif, arahkan CLI lewat environment variable.
+# Local Qdrant server; point the CLI at it via an environment variable once it's up.
 docker compose up -d qdrant
 export QDRANT_URL=http://localhost:6333
 lexnusa-index --no-parse
 ```
 
-Untuk Qdrant Cloud, isi `QDRANT_URL` dan `QDRANT_API_KEY`. Retrieval mengambil kandidat semantik
-dari Qdrant dan kandidat kata-kunci BM25, menggabungkannya dengan Reciprocal Rank Fusion (RRF),
-lalu menjalankan `BAAI/bge-reranker-v2-m3` jika opsi `--rerank` diberikan. Alias
-`lexnusa-qdrant-index` tetap tersedia. Untuk jalur kompatibilitas Chroma M1, gunakan
-`lexnusa-chroma-index` lalu `lexnusa-ask --backend chroma`.
+For Qdrant Cloud, set `QDRANT_URL` and `QDRANT_API_KEY`. Retrieval merges semantic candidates
+from Qdrant with BM25 keyword candidates using Reciprocal Rank Fusion (RRF), then runs
+`BAAI/bge-reranker-v2-m3` when `--rerank` is passed. The `lexnusa-qdrant-index` alias remains
+available. For the Chroma-based compatibility path, use `lexnusa-chroma-index` then
+`lexnusa-ask --backend chroma`.
 
-## Menjalankan M4
+### Legal status & the agent router
 
-Scraper M4 membaca status dan relasi `mengubah`/`mencabut` dari halaman detail resmi. Saat
-indexing, relasi tersebut dipropagasikan ke dokumen target sehingga peraturan lama dapat ditandai
-`diubah` atau `dicabut`. Bila sumber tidak menyediakan status, jawaban menyebutnya sebagai
-`belum terverifikasi` dan tidak menebak.
+The scraper reads status and `amends`/`repeals` relations from official detail pages. During
+indexing, those relations propagate to the target document so an older regulation gets tagged
+`amended` or `repealed`. When a source provides no status, the answer labels it `unverified`
+rather than guessing.
 
 ```bash
-# Ambil ulang metadata status lalu bangun ulang indeks Qdrant.
+# Refetch status metadata, then rebuild the Qdrant index.
 lexnusa-scrape --limit 100 --delay 2
 lexnusa-index
 
-# Lihat keputusan router dan subquery yang dijalankan.
+# Inspect the router's decision and the sub-queries it ran.
 lexnusa-ask --show-plan --no-llm \
-  "Bandingkan perlindungan saksi dan perlindungan korban dalam undang-undang"
+  "Compare witness protection and victim protection across the relevant laws"
 
-# Pertanyaan status memperluas retrieval ke relasi perubahan/pencabutan.
-lexnusa-ask --show-plan --no-llm "Apakah UU Nomor 1 Tahun 2020 masih berlaku?"
+# Status questions widen retrieval to amendment/repeal relations.
+lexnusa-ask --show-plan --no-llm "Is Law No. 1 of 2020 still in force?"
 ```
 
-Router berjalan lokal tanpa panggilan LLM: pertanyaan sederhana memakai satu retrieval, pertanyaan
-status menambahkan query relasi, dan pertanyaan perbandingan/kompleks memakai beberapa subquery
-yang hasilnya dideduplikasi. Prompt generatif dan jawaban ekstraktif sama-sama menampilkan status
-setiap sumber, pasal, URL PDF resmi, dan disclaimer.
+The router runs locally with no LLM call: simple questions use a single retrieval pass, status
+questions add a relation query, and comparison/complex questions fan out into several
+deduplicated sub-queries. Both the generative and extractive answer paths show each source's
+status, article, official PDF URL, and the disclaimer.
 
-## Menjalankan M5
+### API & chat UI
 
-Jalankan API dan chat UI dari satu proses:
+Run the API and chat UI from a single process:
 
 ```bash
 source .venv/bin/activate
 lexnusa-api
 ```
 
-Buka `http://localhost:8000`. Dokumentasi OpenAPI tersedia di `http://localhost:8000/docs`,
-health check di `/health`, dan endpoint chat di `POST /api/chat`:
+Open `http://localhost:8000`. OpenAPI docs are at `http://localhost:8000/docs`, a health check
+at `/health`, and the chat endpoint at `POST /api/chat`:
 
 ```bash
 curl -X POST http://localhost:8000/api/chat \
   -H "Content-Type: application/json" \
-  -d '{"question":"Apakah UU Nomor 1 Tahun 2020 masih berlaku?","use_llm":false}'
+  -d '{"question":"Is Law No. 1 of 2020 still in force?","use_llm":false}'
 ```
 
-Konfigurasi runtime:
+Runtime configuration:
 
-| Variabel | Fungsi | Default |
+| Variable | Purpose | Default |
 |---|---|---|
-| `LEXNUSA_INDEX_DIR` | Lokasi Qdrant embedded | `data/qdrant` |
-| `QDRANT_URL` | Server/Qdrant Cloud | kosong |
-| `QDRANT_API_KEY` | Kredensial Qdrant Cloud | kosong |
-| `GROQ_API_KEY` | Jawaban generatif opsional | kosong |
-| `LEXNUSA_API_KEY` | Wajibkan header `X-API-Key` | kosong/publik |
-| `LEXNUSA_RATE_LIMIT` | Maksimum request per menit per klien | `30` |
+| `LEXNUSA_INDEX_DIR` | Embedded Qdrant location | `data/qdrant` |
+| `QDRANT_URL` | Qdrant server/Cloud endpoint | empty |
+| `QDRANT_API_KEY` | Qdrant Cloud credential | empty |
+| `GROQ_API_KEY` | Optional generative answers | empty |
+| `LEXNUSA_API_KEY` | Require a single shared `X-API-Key` | empty/public |
+| `LEXNUSA_API_KEYS` | Comma-separated per-tester invite codes | empty |
+| `LEXNUSA_RATE_LIMIT` | Max requests per minute per client | `30` |
+| `LEXNUSA_FEEDBACK_FILE` | Where feedback JSON lines are appended | `data/feedback.jsonl` |
 
-Repo menyertakan `Dockerfile` dan `render.yaml`. Untuk deployment Render, hubungkan repo sebagai
-Blueprint, isi `QDRANT_URL`/`QDRANT_API_KEY`, dan tambahkan `GROQ_API_KEY` bila mode generatif
-diinginkan. UI dan API sengaja disajikan dari origin yang sama agar tidak memerlukan konfigurasi
-CORS atau deployment frontend terpisah.
+The repo includes a `Dockerfile` and `render.yaml`. For a Render deployment, connect the repo as
+a Blueprint, set `QDRANT_URL`/`QDRANT_API_KEY`, and add `GROQ_API_KEY` for generative mode. The
+UI and API are deliberately served from the same origin so no CORS configuration or separate
+frontend deployment is needed.
 
-## Catatan
+### Evaluation & feedback
 
-**Bukan nasihat hukum.** Setiap jawaban harus tetap menampilkan sumber asli dan disclaimer
-bahwa ini alat bantu pencarian, bukan pengganti konsultasi hukum resmi. Sebelum scraping
-besar-besaran, cek `robots.txt` dan ketentuan penggunaan situs pemerintah terkait, dan batasi
-rate request supaya tidak membebani server publik.
+The golden QA set lives at `eval/golden_qa.jsonl`. Each case is self-contained — its reference
+documents travel with it in the same JSON line — so evaluation stays reproducible and offline
+even with no real scraped data on the machine running it.
+
+```bash
+lexnusa-eval --golden eval/golden_qa.jsonl --output reports/eval.json
+```
+
+Each case is scored two ways: whether the expected document/article shows up in retrieval
+(`retrieval_hit`), and whether the final answer contains the expected keywords (`keyword_hit`).
+The command exits non-zero if any case fails, so it can act as a CI regression gate before
+widening access.
+
+User feedback (relevant/not relevant) is sent automatically via the 👍/👎 buttons in the chat UI,
+or directly to `POST /api/feedback`:
+
+```json
+{"question":"...","answer":"...","relevant":true,"comment":"optional"}
+```
+
+Each feedback entry is appended as a JSON line to `LEXNUSA_FEEDBACK_FILE` with a UTC timestamp
+and the sender's API key/IP, for manual review when assessing retrieval quality after a soft
+launch.
+
+For a controlled soft launch, replace a single `LEXNUSA_API_KEY` with `LEXNUSA_API_KEYS` (a
+comma-separated list) — each tester gets their own invite code, so access can be revoked
+per-person without rotating a key everyone shares:
+
+```bash
+export LEXNUSA_API_KEYS="tester-a,tester-b,tester-c"
+```
+
+## Notes
+
+**Not legal advice.** Every answer must keep showing its original sources and the disclaimer
+that this is a search aid, not a substitute for formal legal counsel. Before any large-scale
+scraping, check the target government site's `robots.txt` and terms of use, and keep request
+rates low so public servers aren't overloaded.

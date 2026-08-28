@@ -12,3 +12,4 @@ data/chroma/*
 !data/chroma/.gitkeep
 data/qdrant/*
 !data/qdrant/.gitkeep
+data/feedback.jsonl

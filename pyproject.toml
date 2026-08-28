@@ -29,6 +29,7 @@ lexnusa-chroma-index = "lexnusa.indexing:main"
 lexnusa-qdrant-index = "lexnusa.qdrant_store:main"
 lexnusa-ask = "lexnusa.rag:main"
 lexnusa-api = "lexnusa.api:run"
+lexnusa-eval = "lexnusa.eval:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/lexnusa"]

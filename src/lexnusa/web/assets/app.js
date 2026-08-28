@@ -9,6 +9,38 @@ function addMessage(text, role) {
   node.textContent = text;
   messages.appendChild(node);
   messages.scrollTop = messages.scrollHeight;
+  return node;
+}
+
+async function sendFeedback(question, answer, relevant, container) {
+  container.textContent = "Terima kasih atas masukannya.";
+  try {
+    await fetch("/api/feedback", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question, answer, relevant }),
+    });
+  } catch (error) {
+    // Feedback is best-effort; a failed submission shouldn't disrupt the chat.
+  }
+}
+
+function addFeedbackControls(question, answer) {
+  const container = document.createElement("div");
+  container.className = "feedback";
+  const label = document.createElement("span");
+  label.textContent = "Jawaban ini relevan?";
+  const yes = document.createElement("button");
+  yes.type = "button";
+  yes.textContent = "👍 Ya";
+  const no = document.createElement("button");
+  no.type = "button";
+  no.textContent = "👎 Tidak";
+  yes.addEventListener("click", () => sendFeedback(question, answer, true, container));
+  no.addEventListener("click", () => sendFeedback(question, answer, false, container));
+  container.append(label, yes, no);
+  messages.appendChild(container);
+  messages.scrollTop = messages.scrollHeight;
 }
 
 async function ask(question) {
@@ -29,6 +61,7 @@ async function ask(question) {
     route.className = "route";
     route.textContent = `Rute pencarian: ${payload.plan.route} · ${payload.plan.queries.length} query`;
     messages.appendChild(route);
+    addFeedbackControls(question, payload.answer);
   } catch (error) {
     addMessage(`Maaf, terjadi kendala: ${error.message}`, "assistant");
   } finally {

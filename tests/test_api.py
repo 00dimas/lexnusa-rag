@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -45,3 +46,48 @@ def test_rate_limit_rejects_excess_requests() -> None:
     assert client.post("/api/chat", json={"question": "Pertanyaan pertama"}).status_code == 200
     response = client.post("/api/chat", json={"question": "Pertanyaan kedua"})
     assert response.status_code == 429
+
+
+def test_multiple_invite_keys_are_each_individually_valid(monkeypatch) -> None:
+    monkeypatch.delenv("LEXNUSA_API_KEY", raising=False)
+    monkeypatch.setenv("LEXNUSA_API_KEYS", "tester-a, tester-b")
+    client = TestClient(create_app(answer_function=fake_answer))
+
+    assert client.post("/api/chat", json={"question": "Pertanyaan hukum"}).status_code == 401
+    assert client.post(
+        "/api/chat", json={"question": "Pertanyaan hukum"}, headers={"X-API-Key": "tester-b"}
+    ).status_code == 200
+    assert client.post(
+        "/api/chat", json={"question": "Pertanyaan hukum"}, headers={"X-API-Key": "unknown"}
+    ).status_code == 401
+
+
+def test_feedback_is_appended_to_configured_file(tmp_path: Path) -> None:
+    feedback_file = tmp_path / "feedback.jsonl"
+    client = TestClient(create_app(answer_function=fake_answer, feedback_file=feedback_file))
+
+    response = client.post(
+        "/api/feedback",
+        json={"question": "Apa itu LexNusa?", "answer": "Asisten regulasi.", "relevant": True},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "recorded"}
+    lines = feedback_file.read_text(encoding="utf-8").splitlines()
+    assert len(lines) == 1
+    record = json.loads(lines[0])
+    assert record["question"] == "Apa itu LexNusa?"
+    assert record["relevant"] is True
+    assert "timestamp" in record
+
+
+def test_feedback_requires_api_key_when_configured(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.setenv("LEXNUSA_API_KEY", "secret")
+    client = TestClient(create_app(answer_function=fake_answer, feedback_file=tmp_path / "feedback.jsonl"))
+
+    response = client.post(
+        "/api/feedback",
+        json={"question": "Pertanyaan", "answer": "Jawaban", "relevant": False},
+    )
+
+    assert response.status_code == 401
